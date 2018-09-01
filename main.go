@@ -20,10 +20,10 @@ import (
 const MaxDist = 1000
 
 // ImgWidth width of the output
-const ImgWidth = 512
+const ImgWidth = 256
 
 // ImgHeight height of the output
-const ImgHeight = 512
+const ImgHeight = 256
 
 // Ray describes a ray starting from a position and moving in a direction
 type Ray struct {
@@ -175,6 +175,7 @@ type Camera struct {
 
 func (c *Camera) updateMatrices() {
 	c.ViewMatrix = mgl32.LookAtV(c.Position, c.Target, mgl32.Vec3{0, 1, 0})
+	c.ViewMatrix = c.ViewMatrix.Inv()
 }
 
 func renderImage(c *Camera, s *Scene, w int, h int) {
@@ -300,7 +301,7 @@ func main() {
 		triangles = append(triangles, tri)
 	}
 
-	c := Camera{mgl32.Vec3{0, 50, 100}, mgl32.Vec3{0, 50, 0}, mgl32.Mat4{}}
+	c := Camera{mgl32.Vec3{0, 50, 100}, mgl32.Vec3{0, 25, 0}, mgl32.Mat4{}}
 	c.updateMatrices()
 	s := Scene{}
 
