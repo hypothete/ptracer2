@@ -167,6 +167,52 @@ type Scene struct {
 	Children []Model
 }
 
+// LoadModel fetches an OBJ and converts it into superior triangles
+func (s *Scene) LoadModel(name, url string) Model {
+	fmt.Printf("loading model %q from %q\n", name, url)
+	objdata, err := ioutil.ReadFile(url)
+	if err != nil {
+		panic(err)
+	}
+
+	parserOptions := &gwob.ObjParserOptions{}
+	obj, err := gwob.NewObjFromBuf(name, objdata, parserOptions)
+	if err != nil {
+		panic(err)
+	}
+
+	triangles := make([]Triangle, len(obj.Indices)/3)
+
+	sLook := obj.StrideSize / 4
+
+	for i := 0; i < len(obj.Indices); i += 3 {
+		aIndex := obj.Indices[i]
+		bIndex := obj.Indices[i+1]
+		cIndex := obj.Indices[i+2]
+
+		taa := obj.Coord[aIndex*sLook]
+		tab := obj.Coord[aIndex*sLook+1]
+		tac := obj.Coord[aIndex*sLook+2]
+
+		tba := obj.Coord[bIndex*sLook]
+		tbb := obj.Coord[bIndex*sLook+1]
+		tbc := obj.Coord[bIndex*sLook+2]
+
+		tca := obj.Coord[cIndex*sLook]
+		tcb := obj.Coord[cIndex*sLook+1]
+		tcc := obj.Coord[cIndex*sLook+2]
+
+		tri := Triangle{mgl32.Vec3{taa, tab, tac}, mgl32.Vec3{tba, tbb, tbc}, mgl32.Vec3{tca, tcb, tcc}}
+
+		triangles = append(triangles, tri)
+	}
+
+	g := Geometry{triangles}
+	m := Model{name, g}
+	s.Children = append(s.Children, m)
+	return m
+}
+
 // Camera defines where we view the scene from
 type Camera struct {
 	Position, Target mgl32.Vec3
@@ -262,61 +308,15 @@ func renderImage(c *Camera, s *Scene, w int, h int) {
 
 func main() {
 
-	objdata, err := ioutil.ReadFile("./teapot.obj")
-	if err != nil {
-		panic(err)
-	}
-
-	parserOptions := &gwob.ObjParserOptions{}
-	obj, err := gwob.NewObjFromBuf("teapot", objdata, parserOptions)
-	if err != nil {
-		panic(err)
-	}
-
-	triangles := make([]Triangle, len(obj.Indices)/3)
-
-	fmt.Println("making triangles")
-
-	sLook := obj.StrideSize / 4
-
-	for i := 0; i < len(obj.Indices); i += 3 {
-		aIndex := obj.Indices[i]
-		bIndex := obj.Indices[i+1]
-		cIndex := obj.Indices[i+2]
-
-		taa := obj.Coord[aIndex*sLook]
-		tab := obj.Coord[aIndex*sLook+1]
-		tac := obj.Coord[aIndex*sLook+2]
-
-		tba := obj.Coord[bIndex*sLook]
-		tbb := obj.Coord[bIndex*sLook+1]
-		tbc := obj.Coord[bIndex*sLook+2]
-
-		tca := obj.Coord[cIndex*sLook]
-		tcb := obj.Coord[cIndex*sLook+1]
-		tcc := obj.Coord[cIndex*sLook+2]
-
-		tri := Triangle{mgl32.Vec3{taa, tab, tac}, mgl32.Vec3{tba, tbb, tbc}, mgl32.Vec3{tca, tcb, tcc}}
-
-		triangles = append(triangles, tri)
-	}
-
-	c := Camera{mgl32.Vec3{0, 50, 100}, mgl32.Vec3{0, 25, 0}, mgl32.Mat4{}}
+	c := Camera{mgl32.Vec3{1.5, 3.5, 1}, mgl32.Vec3{0, 2.5, 0}, mgl32.Mat4{}}
 	c.updateMatrices()
 	s := Scene{}
 
-	fmt.Println("rendering obj")
+	s.LoadModel("base", "./teapot-base.obj")
 
-	g := Geometry{}
-	g.Faces = triangles
-	m := Model{"test", g}
-	s.Children = append(s.Children, m)
-
+	fmt.Println("models loaded, starting render...")
 	startTime := time.Now()
-
 	renderImage(&c, &s, ImgWidth, ImgHeight)
-
 	endTime := time.Now()
-
 	fmt.Println("Elapsed time: ", endTime.Sub(startTime))
 }
